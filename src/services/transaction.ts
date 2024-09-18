@@ -2,8 +2,7 @@ import axios from 'axios';
 import { ethers } from 'ethers';
 import AbiCoder from "web3-eth-abi";
 import { Logger } from '@maticnetwork/chain-indexer-framework';
-import { IProof } from "../types/index.js";
-import { ITransaction } from '@maticnetwork/bridge-api-common/interfaces/transaction';
+import { IProof, ITransaction } from "../types/index.js";
 
 const _GLOBAL_INDEX_MAINNET_FLAG = BigInt(2 ** 64);
 
@@ -13,7 +12,6 @@ export default class TransactionService {
         private proofUrl: string,
         private transactionUrl: string,
         private sourceNetworks: string,
-        private destinationNetwork: string,
         private ethersClients: { [key: string]: ethers.JsonRpcProvider },
         private transactionApiKey: string | undefined,
         private proofApiKey: string | undefined,
@@ -37,12 +35,14 @@ export default class TransactionService {
                     'x-access-token': this.transactionApiKey
                 }
             }
+            Logger.info({"":`${this.transactionUrl}/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`})
             let transactionData = await axios.get(
-                `${this.transactionUrl}?userAddress=${sourceNetworkIds}&destinationNetworkIds=${this.destinationNetwork}&status=READY_TO_CLAIM`,
-                { headers }
+                // `${this.transactionUrl}?userAddress=${sourceNetworkIds}&destinationNetworkIds=${this.destinationNetwork}&status=READY_TO_CLAIM`,
+                // { headers }
+                `${this.transactionUrl}/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
             );
-            if (transactionData && transactionData.data && transactionData.data.result) {
-                transactions = transactionData.data.result;
+            if (transactionData) {
+                transactions = transactionData.data.deposits;
             }
         } catch (error: any) {
             Logger.error({
@@ -60,43 +60,6 @@ export default class TransactionService {
         })
         return transactions;
 
-    }
-
-    private computeGlobalIndex(indexLocal: number, sourceNetworkId: number) {
-        if (BigInt(sourceNetworkId) === BigInt(0)) {
-            return BigInt(indexLocal) + _GLOBAL_INDEX_MAINNET_FLAG;
-        } else {
-            return BigInt(indexLocal) + BigInt(sourceNetworkId - 1) * BigInt(2 ** 32);
-        }
-    }
-
-    async getTransactionPayload(
-        transactionHash: string, sourceNetwork: number, counter: number
-    ) {
-        const transaction = await this.ethersClients[sourceNetwork].getTransactionReceipt(transactionHash);
-        if (transaction) {
-            let logs = transaction.logs.filter(obj => obj.topics[0].toLowerCase() === '0x501781209a1f8899323b96b4ef08b168df93e0a90c673d1e4cce39366cb62f9b'.toLowerCase())
-            logs = logs.filter(obj => (AbiCoder as any).decodeParameters(
-                ["uint8", "uint32", "address", "uint32", "address", "uint256", "bytes", "uint32"],
-                obj.data
-            )[7] === counter.toString())
-            if (logs.length) {
-                let data = (AbiCoder as any).decodeParameters(
-                    ["uint8", "uint32", "address", "uint32", "address", "uint256", "bytes", "uint32"],
-                    logs[0].data
-                )
-                return {
-                    globalIndex: this.computeGlobalIndex(data[7], sourceNetwork).toString(),
-                    originNetwork: data[1],
-                    originTokenAddress: data[2],
-                    destinationNetwork: data[3],
-                    destinationAddress: data[4],
-                    amount: data[5],
-                    metadata: data[6] || '0x',
-                }
-            }
-        }
-        return null;
     }
 
     async getProof(sourceNetwork: number, depositCount: number): Promise<IProof | null> {
