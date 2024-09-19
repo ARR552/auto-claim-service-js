@@ -15,7 +15,7 @@ export default class TransactionService {
         private ethersClients: { [key: string]: ethers.JsonRpcProvider },
         private transactionApiKey: string | undefined,
         private proofApiKey: string | undefined,
-    ) { }
+    ) {}
 
     async getPendingTransactions(): Promise<ITransaction[]> {
         Logger.info({
@@ -35,11 +35,8 @@ export default class TransactionService {
                     'x-access-token': this.transactionApiKey
                 }
             }
-            Logger.info({"":`${this.transactionUrl}/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`})
             let transactionData = await axios.get(
-                // `${this.transactionUrl}?userAddress=${sourceNetworkIds}&destinationNetworkIds=${this.destinationNetwork}&status=READY_TO_CLAIM`,
-                // { headers }
-                `${this.transactionUrl}/0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
+                `${this.transactionUrl}?dest_net=1&leaf_type=0&dest_addr=0x0000000000000000000000000000000000000000`
             );
             if (transactionData) {
                 transactions = transactionData.data.deposits;
@@ -80,8 +77,7 @@ export default class TransactionService {
                 }
             }
             let proofData = await axios.get(
-                `${this.proofUrl}?networkId=${sourceNetwork}&depositCount=${depositCount}`,
-                { headers }
+                `${this.proofUrl}?net_id=${sourceNetwork}&deposit_cnt=${depositCount}`
             );
             if (
                 proofData && proofData.data && proofData.data.proof &&

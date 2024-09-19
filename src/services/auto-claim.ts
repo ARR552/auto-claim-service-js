@@ -1,10 +1,10 @@
 import { Logger } from '@maticnetwork/chain-indexer-framework';
 import { ethers } from 'ethers';
+import { Contract, Web3 } from 'web3';
 import SlackNotify from './slack-notify.js';
 import { IProof, ITransaction } from "../types/index.js";
 import GasStation from './gas-station.js';
 import TransactionService from "./transaction.js";
-const _GLOBAL_INDEX_MAINNET_FLAG = BigInt(2 ** 64);
 
 let failedTx: { [key: number]: number } = {};
 let completedTx: { [key: string]: boolean } = {};
@@ -17,25 +17,26 @@ export default class AutoClaimService {
     /**
      * @constructor
      * 
-     * @param {ethers.Contract} compressContract
-     * @param {ethers.Contract} bridgeContract
+     * @param {Contract} compressContract
+     * @param {Contract} bridgeContract
      * @param {TransactionService} transactionService
      * @param {GasStation} gasStation
-     * @param {string} destinationNetwork
      * @param {SlackNotify | null} slackNotify
+     * @param {string} walletAddress
      */
     constructor(
-        private compressContract: ethers.Contract,
-        private bridgeContract: ethers.Contract,
+        private compressContract: any,
+        private bridgeContract: any,
         private transactionService: TransactionService,
         private gasStation: GasStation,
-        private slackNotify: SlackNotify | null = null
+        private slackNotify: SlackNotify | null = null,
+        private walletAddress: string
     ) {}
 
     async estimateGas(transaction: ITransaction, proof: IProof): Promise<boolean> {
         try {
             if (transaction.leaf_type === 0) {
-                await this.bridgeContract.claimAsset.estimateGas(
+                await this.bridgeContract.methods.claimAsset(
                     proof.merkle_proof,
                     proof.rollup_merkle_proof,
                     transaction.global_index,
@@ -47,9 +48,9 @@ export default class AutoClaimService {
                     transaction.dest_addr,
                     transaction.amount,
                     transaction.metadata
-                )
+                ).estimateGas()
             } else {
-                await this.bridgeContract.claimMessage.estimateGas(
+                await this.bridgeContract.methods.claimMessage(
                     proof.merkle_proof,
                     proof.rollup_merkle_proof,
                     transaction.global_index,
@@ -61,11 +62,12 @@ export default class AutoClaimService {
                     transaction.dest_addr,
                     transaction.amount,
                     transaction.metadata
-                )
+                ).estimateGas()
             }
 
             return true;
         } catch (error: any) {
+            Logger.error({"error": error})
             if (!transaction.deposit_cnt) {
                 return false;
             }
@@ -137,13 +139,16 @@ export default class AutoClaimService {
                 }
             }
 
-            response = await this.compressContract.compressClaimCall(
+            response = await this.compressContract.methods.compressClaimCall(
                 main_exit_root,
                 rollup_exit_root,
                 data,
                 { gasPrice }
-            )
-            response = await this.compressContract.sendCompressedClaims(response)
+            ).call();
+            response = await this.compressContract.methods.sendCompressedClaims(response).send({
+                from: this.walletAddress,
+                type: 0,
+              });
             for (const tx of batch) {
                 completedTx[`${tx.transaction.network_id}-${tx.transaction.deposit_cnt}`] = true
             }
@@ -154,8 +159,6 @@ export default class AutoClaimService {
                 claimTransactionHash: response?.hash
             })
         } catch (error: any) {
-            Logger.info({ "aqui": "aqui" })
-
             Logger.error({ error })
         }
         return response;
@@ -174,6 +177,7 @@ export default class AutoClaimService {
                 const proof = await this.transactionService.getProof(transaction.network_id, transaction.deposit_cnt as number)
                 if (proof) {
                     let estimateGas = await this.estimateGas(transaction, proof);
+                    Logger.info({"estimateGas": estimateGas})
                     if (estimateGas) {
                         finalClaimableTransaction.push({
                             transaction,

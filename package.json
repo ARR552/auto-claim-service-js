@@ -22,7 +22,8 @@
         "axios": "^1.6.8",
         "dotenv": "^16.0.1",
         "ethers": "^6.12.1",
-        "long": "^5.2.0"
+        "long": "^5.2.0",
+        "web3": "^4.12.1"
     },
     "devDependencies": {
         "@types/node-cron": "^3.0.11",
