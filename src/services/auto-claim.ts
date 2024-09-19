@@ -1,6 +1,5 @@
 import { Logger } from '@maticnetwork/chain-indexer-framework';
 import { ethers } from 'ethers';
-import { Contract, Web3 } from 'web3';
 import SlackNotify from './slack-notify.js';
 import { IProof, ITransaction } from "../types/index.js";
 import GasStation from './gas-station.js';

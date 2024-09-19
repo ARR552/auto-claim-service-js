@@ -1,6 +1,4 @@
 import axios from 'axios';
-import { ethers } from 'ethers';
-import AbiCoder from "web3-eth-abi";
 import { Logger } from '@maticnetwork/chain-indexer-framework';
 import { IProof, ITransaction } from "../types/index.js";
 
@@ -11,10 +9,7 @@ export default class TransactionService {
     constructor(
         private proofUrl: string,
         private transactionUrl: string,
-        private sourceNetworks: string,
-        private ethersClients: { [key: string]: ethers.JsonRpcProvider },
-        private transactionApiKey: string | undefined,
-        private proofApiKey: string | undefined,
+        private destinationNetwork: string,
     ) {}
 
     async getPendingTransactions(): Promise<ITransaction[]> {
@@ -25,18 +20,8 @@ export default class TransactionService {
         })
         let transactions: ITransaction[] = [];
         try {
-            let sourceNetworkIds = "";
-            JSON.parse(this.sourceNetworks).forEach((networkId: number) => {
-                sourceNetworkIds = `${sourceNetworkIds}&sourceNetworkIds=${networkId}`
-            })
-            let headers = {};
-            if (this.transactionApiKey) {
-                headers = {
-                    'x-access-token': this.transactionApiKey
-                }
-            }
             let transactionData = await axios.get(
-                `${this.transactionUrl}?dest_net=1&leaf_type=0&dest_addr=0x0000000000000000000000000000000000000000`
+                `${this.transactionUrl}?dest_net=${this.destinationNetwork}&leaf_type=0&dest_addr=0x0000000000000000000000000000000000000000`
             );
             if (transactionData) {
                 transactions = transactionData.data.deposits;
@@ -60,22 +45,8 @@ export default class TransactionService {
     }
 
     async getProof(sourceNetwork: number, depositCount: number): Promise<IProof | null> {
-        // Logger.info({
-        //     location: 'TransactionService',
-        //     function: 'getProof',
-        //     call: 'started',
-        //     data: {
-        //         depositCount
-        //     }
-        // })
         let proof: IProof | null = null;
         try {
-            let headers = {};
-            if (this.proofApiKey) {
-                headers = {
-                    'x-access-token': this.proofApiKey
-                }
-            }
             let proofData = await axios.get(
                 `${this.proofUrl}?net_id=${sourceNetwork}&deposit_cnt=${depositCount}`
             );
@@ -97,11 +68,6 @@ export default class TransactionService {
                 }
             });
         }
-        // Logger.info({
-        //     location: 'TransactionService',
-        //     function: 'getProof',
-        //     call: 'completed'
-        // })
         return proof;
     }
 }

@@ -4,13 +4,9 @@ config();
 
 export default {
     PRIVATE_KEY: process.env.PRIVATE_KEY,
-    SOURCE_NETWORKS: process.env.SOURCE_NETWORKS || '[]',
-    SOURCE_NETWORKS_RPC: process.env.SOURCE_NETWORKS_RPC || '[]',
     DESTINATION_NETWORK: process.env.DESTINATION_NETWORK,
     TRANSACTIONS_URL: process.env.TRANSACTIONS_URL,
-    TRANSACTIONS_API_KEY: process.env.TRANSACTIONS_API_KEY,
     PROOF_URL: process.env.PROOF_URL,
-    PROOF_API_KEY: process.env.PROOF_API_KEY,
     RPC_URL: process.env.RPC_URL,
     BRIDGE_CONTRACT: process.env.BRIDGE_CONTRACT,
     CLAIM_COMPRESSOR_CONTRACT: process.env.CLAIM_COMPRESSOR_CONTRACT,

@@ -1,6 +1,5 @@
 import { Logger } from "@maticnetwork/chain-indexer-framework/logger";
 import AutoClaimService from "./services/auto-claim.js";
-import { ethers } from 'ethers';
 import { Contract, Web3 } from 'web3';
 import config from "./config/index.js";
 import claimCompressorAbi from "./abi/claim_compressor.js";
@@ -45,10 +44,6 @@ async function start() {
             slackNotify = new SlackNotify(config.SLACK_URL)
         }
 
-        let ethersClients: { [key: string]: ethers.JsonRpcProvider } = {}
-        for (let index = 0; index < JSON.parse(config.SOURCE_NETWORKS).length; index += 1) {
-            ethersClients[JSON.parse(config.SOURCE_NETWORKS)[index]] = new ethers.JsonRpcProvider(JSON.parse(config.SOURCE_NETWORKS_RPC)[index])
-        }
         const claimCompressor = new Contract(claimCompressorAbi, config.CLAIM_COMPRESSOR_CONTRACT, provider);
         const bridge = new Contract(bridgeAbi, config.BRIDGE_CONTRACT, provider);
 
@@ -58,10 +53,7 @@ async function start() {
             new TransactionService(
                 config.PROOF_URL as string,
                 config.TRANSACTIONS_URL as string,
-                config.SOURCE_NETWORKS,
-                ethersClients,
-                config.TRANSACTIONS_API_KEY,
-                config.PROOF_API_KEY
+                config.DESTINATION_NETWORK as string
             ),
             new GasStation(config.GAS_STATION_URL as string),
             slackNotify,
@@ -70,7 +62,7 @@ async function start() {
 
         run();
     } catch (error) {
-        // Logger.error({ error });
+        Logger.error({ error });
     }
 };
 
